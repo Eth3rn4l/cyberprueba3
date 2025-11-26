@@ -28,6 +28,7 @@ pipeline {
                 '''
             }
         }
+
         stage('Python Security Audit') {
             steps {
                 sh '''
@@ -55,12 +56,31 @@ pipeline {
                 }
             }
         }
+
         stage('Dependency Check') {
             environment {
                 NVD_API_KEY = credentials('nvdApiKey')
             }
             steps {
-                dependencyCheck additionalArguments: "--scan . --format HTML --out dependency-check-report --enableExperimental --enableRetired --nvdApiKey ${NVD_API_KEY}", odcInstallation: 'DependencyCheck'
+                dependencyCheck additionalArguments: "--scan . --format HTML --out dependency-check-report --enableExperimental --enableRetired --nvdApiKey ${NVD_API_KEY}", 
+                                 odcInstallation: 'DependencyCheck'
+            }
+        }
+
+        stage('OWASP ZAP Baseline Scan') {
+            steps {
+                sh '''
+                    echo "=== Ejecutando OWASP ZAP Baseline Scan ==="
+
+                    . venv/bin/activate
+                    chmod +x zap/zap-baseline.py
+
+                    python3 zap/zap-baseline.py \
+                        -t http://172.23.202.60:5000 \
+                        -r zap_report.html || true
+
+                    echo "ZAP Baseline Scan finalizado"
+                '''
             }
         }
 
@@ -77,5 +97,4 @@ pipeline {
             }
         }
     }
-
 }
