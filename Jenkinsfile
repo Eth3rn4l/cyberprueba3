@@ -5,11 +5,10 @@ pipeline {
         PROJECT_NAME = "pipeline-test"
         SONARQUBE_URL = "http://sonarqube:9000"
         SONARQUBE_TOKEN = "squ_32ab2e416d859f825c47d48892ae63d40ba60be6"
-        TARGET_URL = "http://172.23.202.60:5000"
+        TARGET_URL = "172.23.202.60:5000"
     }
 
     stages {
-
         stage('Install Python') {
             steps {
                 sh '''
@@ -18,7 +17,7 @@ pipeline {
                 '''
             }
         }
-
+        
         stage('Setup Environment') {
             steps {
                 sh '''
@@ -26,16 +25,6 @@ pipeline {
                     . venv/bin/activate
                     pip install --upgrade pip
                     pip install -r requirements.txt
-                '''
-            }
-        }
-
-        stage('Start Vulnerable Server') {
-            steps {
-                sh '''
-                    . venv/bin/activate
-                    nohup python3 vulnerable_server.py > server.log 2>&1 &
-                    sleep 5
                 '''
             }
         }
@@ -50,7 +39,7 @@ pipeline {
                 '''
             }
         }
-
+        
         stage('SonarQube Analysis') {
             steps {
                 script {
@@ -78,48 +67,15 @@ pipeline {
             }
         }
 
-        stage('OWASP ZAP Scan') {
-    steps {
-        sh '''
-            mkdir -p zap-report
-
-            docker pull owasp/zap2docker-stable
-
-            docker run \
-                --network=host \
-                -v $(pwd)/zap-report:/zap/wrk \
-                owasp/zap2docker-stable \
-                zap-baseline.py \
-                -t http://172.23.202.60:5000 \
-                -r zap_report.html
-        '''
-    }
-    post {
-        success {
-            archiveArtifacts artifacts: 'zap-report/zap_report.html', fingerprint: true
-        }
-    }
-}
-
-
         stage('Publish Reports') {
             steps {
                 publishHTML([
-                    allowMissing: true,
+                    allowMissing: false,
                     alwaysLinkToLastBuild: true,
                     keepAll: true,
                     reportDir: 'dependency-check-report',
                     reportFiles: 'dependency-check-report.html',
                     reportName: 'OWASP Dependency Check Report'
-                ])
-
-                publishHTML([
-                    allowMissing: true,
-                    alwaysLinkToLastBuild: true,
-                    keepAll: true,
-                    reportDir: 'zap-report',
-                    reportFiles: 'zap_report.html',
-                    reportName: 'OWASP ZAP Scan Report'
                 ])
             }
         }
