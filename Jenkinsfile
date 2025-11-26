@@ -79,19 +79,28 @@ pipeline {
         }
 
         stage('OWASP ZAP Scan') {
-            steps {
-                sh '''
-                    mkdir -p zap-report
-                    zap.sh -cmd -quickurl $TARGET_URL \
-                        -quickout zap-report/zap_report.html
-                '''
-            }
-            post {
-                success {
-                    archiveArtifacts artifacts: 'zap-report/zap_report.html', fingerprint: true
-                }
-            }
+    steps {
+        sh '''
+            mkdir -p zap-report
+
+            docker pull owasp/zap2docker-stable
+
+            docker run \
+                --network=host \
+                -v $(pwd)/zap-report:/zap/wrk \
+                owasp/zap2docker-stable \
+                zap-baseline.py \
+                -t http://172.23.202.60:5000 \
+                -r zap_report.html
+        '''
+    }
+    post {
+        success {
+            archiveArtifacts artifacts: 'zap-report/zap_report.html', fingerprint: true
         }
+    }
+}
+
 
         stage('Publish Reports') {
             steps {
