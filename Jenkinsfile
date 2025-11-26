@@ -67,6 +67,23 @@ pipeline {
             }
         }
 
+        stage('OWASP ZAP Baseline Scan') {
+            steps {
+                sh '''
+                    echo "=== Ejecutando OWASP ZAP Baseline Scan ==="
+
+                    . venv/bin/activate
+                    chmod +x zap/zap-baseline.py
+
+                    python3 zap/zap-baseline.py \
+                        -t http://172.23.202.60:5000 \
+                        -r zap_report.html || true
+
+                    echo "ZAP Baseline Scan finalizado"
+                '''
+            }
+        }
+
         stage('Publish Reports') {
             steps {
                 publishHTML([
